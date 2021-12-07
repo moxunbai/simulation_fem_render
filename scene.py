@@ -37,7 +37,7 @@ class Scene:
         self.objlights = []
         self._light_num = 0
         self.light_num = ti.field(ti.i32, shape=())
-        self.objs_field =ti.field(ti.i32)
+
 
     def clear(self):
         self.objects = []

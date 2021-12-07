@@ -22,9 +22,9 @@ LameMu = ti.field(ti.f64, ())
 LameLa = ti.field(ti.f64, ())
 
 # time-step size (for simulation, 16.7ms)
-h = 16.7e-3
+h = 41.7e-3
 # substepping
-substepping = 100
+substepping = 250
 # time-step size (for time integration)
 dh = h/substepping
 
@@ -244,7 +244,7 @@ updateLameCoeff()
 
 t1 = time()
 print('starting simulation')
-for k in range(900):
+for k in range(480):
    for i in range(substepping):
        compute_gradient()
        update()
@@ -254,13 +254,3 @@ for k in range(900):
    gen_obj("./out/obj/spot_falling_"+str(k)+".obj",k)
 print(time() - t1)
 #
-
-# t2 = time()
-# print('starting rendering')
-# render= Render()
-# for k in range(900):
-#     obj_fname="./out/obj/spot_falling_"+str(k)+".obj"
-#     img_fname="./out/images/spot_falling_"+str(k)+".png"
-#     render.rende_image(obj_fname,img_fname)
-#     print("render image:"+img_fname)
-# print(time() - t2)

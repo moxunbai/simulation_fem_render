@@ -130,4 +130,6 @@ dmypy.json
  
 .idea
 __pycache__
-out
+out/obj/
+out/images/
+out/video/
