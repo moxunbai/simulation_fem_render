@@ -35,10 +35,10 @@ class Render:
        aspect_ratio = 1.0
        self.image_width = 784
        self.image_height = int(self.image_width / aspect_ratio)
-       # self.rays = ray.Rays(self.image_width, self.image_height)
-       self.film_pixels = ti.Vector.field(3, dtype=float)
-       ti.root.dense(ti.ij,
-                     (self.image_width, self.image_height)).place(self.film_pixels)
+
+       # self.film_pixels = ti.Vector.field(3, dtype=float)
+       # ti.root.dense(ti.ij,
+       #               (self.image_width, self.image_height)).place(self.film_pixels)
        self.samples_per_pixel = 60
        self.max_depth = 10
 
@@ -68,8 +68,14 @@ class Render:
        self.base_objs.append((floor,0))
        self.base_objs.append((light_,1))
 
+
+    def init_ti(self ):
+       self.film_pixels = ti.Vector.field(3, dtype=float)
+       ti.root.dense(ti.ij,
+                     (self.image_width, self.image_height)).place(self.film_pixels)
+       self.init_film_pixels()
     @ti.func
-    def ray_color(self,ray_org, ray_dir):
+    def ray_color(self,ray_org, ray_dir,k):
 
        col = ti.Vector([0.0, 0.0, 0.0])
        coefficient = ti.Vector([1.0, 1.0, 1.0])
@@ -79,8 +85,6 @@ class Render:
           hit, p, n, front_facing, obj_index, tri_index = self.scene.hit_all(ray_org, ray_dir)
 
           if hit:
-             # if index == 1:
-             # print("hit",index)
              isLight, emittedCol = self.scene.materials.emitted(obj_index, ray_dir, p, n, front_facing)
 
              if isLight:  # 光源
@@ -99,6 +103,7 @@ class Render:
 
                 # elif front_facing:
                 else:
+
                    pdf, ray_out_dir = self.scene.mix_sample(obj_index, ray_dir, p, n, front_facing)
 
                    if pdf > 0.0 and ray_out_dir.norm() > 0:
@@ -133,28 +138,44 @@ class Render:
        self.scene.commit()
 
     @ti.kernel
-    def render(self):
+    def init_film_pixels(self):
+       for i, j in self.film_pixels:
+          self.film_pixels[i, j] =ti.Vector.zero(float, 3)
+
+    @ti.kernel
+    def cal_film_val(self):
+       for i, j in self.film_pixels:
+          val = self.film_pixels[i, j]/self.samples_per_pixel
+          self.film_pixels[i, j] =clamp(ti.sqrt(val), 0.0, 0.999)
+
+    @ti.kernel
+    def render(self,k:ti.i32):
 
        for i, j in self.film_pixels:
-          col = ti.Vector.zero(float, 3)
+          # col = ti.Vector.zero(float, 3)
 
-          for k in range(self.samples_per_pixel):
+          # for k in range(self.samples_per_pixel):
              (u, v) = ((i + ti.random()) / self.image_width, (j + ti.random()) / self.image_height)
              ray_org, ray_dir = self.camera.get_ray(u, v)
              ray_dir = ray_dir.normalized()
-
-             col += self.ray_color(ray_org, ray_dir)
-          col /= self.samples_per_pixel
+             self.film_pixels[i, j] +=self.ray_color(ray_org, ray_dir,k)
+             # if i==100 and j==100 and self.film_pixels[i, j][0]==0.0:
+             #     print(ray_dir)
+          #    col += self.ray_color( ray_org, ray_dir)
+          # col /= self.samples_per_pixel
 
           # film_pixels[i, j] =  ti.sqrt(col)
-          self.film_pixels[i, j] = clamp(ti.sqrt(col), 0.0, 0.999)
+          # self.film_pixels[i, j] = clamp(ti.sqrt(col), 0.0, 0.999)
 
     def write_img(self, filename):
        ti.imwrite(self.film_pixels.to_numpy(), filename)
 
-    def rende_image(self,obj_filename,img_filename):
+    def rende_image(self,obj_filename,img_filename,i):
+       self.init_ti()
        self.set_moddel(obj_filename)
-       self.render()
+       for k in range(self.samples_per_pixel):
+         self.render(i)
+       self.cal_film_val()
        self.write_img(img_filename)
 
 

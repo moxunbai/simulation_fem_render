@@ -154,8 +154,7 @@ class MeshTriangle:
         self.box_min = [infinity,infinity,infinity]
         self.box_max = [-infinity,-infinity,-infinity]
         for face, norms, texcoords, material in objLoader.faces:
-            # print("texcoords",texcoords )
-            # print("material",material )
+
             face_vertices=[]
             face_norms=[]
             face_texcoords=[]
